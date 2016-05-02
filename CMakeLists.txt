@@ -8,3 +8,6 @@ add_executable(mirroredpalindromes "week_01/mirroredpalindromes.cpp")
 
 project(beachbars)
 add_executable(beachbars "week_02/beachbars.cpp")
+
+project(burcoin)
+add_executable(burcoin "week_02/burcoin.cpp")
