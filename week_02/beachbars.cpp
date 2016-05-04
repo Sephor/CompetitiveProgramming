@@ -2,15 +2,18 @@
 #include <stdint.h>
 #include <algorithm>
 
+#define MAXPARASOLS 10000
+#define MAXSPOTS 20000
+
 int main()
 {
 	std::ios::sync_with_stdio(false);
 
-	int32_t parasols[10000];
+	int32_t parasols[MAXPARASOLS];
 
 	//the rightmost parasols of the best spots
-	//can be max. 5000 configurations with given limits, with two spots each
-	int32_t bestSpots[10000];
+	uint16_t bestRight[MAXPARASOLS];
+	int32_t bestSpots[MAXSPOTS];
 
 	uint16_t beachCount;
 	std::cin >> beachCount;
@@ -29,10 +32,10 @@ int main()
 
 		uint16_t bestCount = 0;
 		uint16_t l = 0;
-		int16_t foundSpots = 0;
+		uint16_t foundSpots = 0;
 		for (uint16_t r = 0; r < parasolCount; ++r)
 		{
-			while (parasols[r] - parasols[l] > 201) 
+			while (parasols[r] - parasols[l] > 200) 
 			{
 				++l;
 			}
@@ -46,31 +49,29 @@ int main()
 			if (count > bestCount)
 			{
 				foundSpots = 1;
-				bestSpots[0] = r;
+				bestRight[0] = r;
 				bestCount = count;
 				continue;
 			}
 
-			bestSpots[foundSpots++] = r;
+			bestRight[foundSpots++] = r;
 		}
 
 		//output max. parasols
 		std::cout << bestCount-- << ' ';
 
-		//bad naming: this is 10000 - 1 - spotCount
-		uint16_t spotCount = 9999;
+		uint16_t spotCount = 0;
 		uint32_t shortest = -1;
-		--foundSpots;
-		for (; foundSpots >= 0; --foundSpots)
+		for (uint16_t i = 0; i < foundSpots; ++i)
 		{
-			int32_t spot = parasols[bestSpots[foundSpots]] + parasols[bestSpots[foundSpots] - bestCount];
+			int32_t spot = parasols[bestRight[i]] + parasols[bestRight[i] - bestCount];
 			
 			//can't be "%" because -2 % 2 == -1
 			if(spot & 1)
 			{
 				--spot; //so that result of division is always floored
 				spot /= 2;
-				uint32_t len = parasols[bestSpots[foundSpots]] - spot;
+				uint32_t len = parasols[bestRight[i]] - spot;
 				if (len > shortest)
 				{
 					continue;
@@ -78,18 +79,18 @@ int main()
 				if (len < shortest)
 				{
 					shortest = len;
-					spotCount = 9997; //found 2 spots
-					bestSpots[9999] = spot + 1;
-					bestSpots[9998] = spot;
+					spotCount = 2;
+					bestSpots[0] = spot;
+					bestSpots[1] = spot + 1;
 					continue;
 				}
-				bestSpots[spotCount--] = spot + 1;
-				bestSpots[spotCount--] = spot;
+				bestSpots[spotCount++] = spot;
+				bestSpots[spotCount++] = spot + 1;
 				continue;
 			}
 
 			spot /= 2;
-			uint32_t len = parasols[bestSpots[foundSpots]] - spot;
+			uint32_t len = parasols[bestRight[i]] - spot;
 			if (len > shortest)
 			{
 				continue;
@@ -97,23 +98,23 @@ int main()
 			if (len < shortest)
 			{
 				shortest = len;
-				spotCount = 9998; //found 1 spots
-				bestSpots[9999] = spot;
+				spotCount = 1;
+				bestSpots[0] = spot;
 				continue;
 			}
 
-			bestSpots[spotCount--] = spot;
+			bestSpots[spotCount++] = spot;
 		}
 
 		//output shortest maximum distance
 		std::cout << shortest << '\n';
 		
-		std::cout << bestSpots[(++spotCount)++];
-		for (; spotCount < 10000; ++spotCount)
+		std::cout << bestSpots[0];
+		for (uint16_t i = 1; i < spotCount; ++i)
 		{
-			std::cout << ' ' << bestSpots[spotCount];
+			std::cout << ' ' << bestSpots[i];
 		}
-		std::cout << '\n';
+		std::cout << std::endl;
 	}
 
     return 0;
