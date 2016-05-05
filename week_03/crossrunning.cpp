@@ -1,139 +1,244 @@
 #include <iostream>
 #include <stdint.h>
+#include <cstring>
 
 #define MAXPOINTS 800000
 #define DIGITS 8 //including newlines
 #define MAXCHARS MAXPOINTS * DIGITS + 1
 #define CHARSIZE 1
 
-//max number of character in the input stream
-char points[MAXCHARS + 2 * DIGITS];
+//an array to hold all characters from the input stream
+char points[MAXCHARS + MAXCHARS / 3 +  10 * DIGITS];
 
-void output(uint32_t start, uint32_t end)
+//A struct to deal with unparsed numbers in the points array
+//overrides <,>,<=,>=,==,++ operators for convenience
+struct Number
 {
-	for (; start <= end; ++start)
-	{
-		std::cout << points[start];
-	}
-}
+	//default constructor
+	Number() {}
 
-bool lessThan(uint32_t startA, uint32_t endA, uint32_t startB, uint32_t endB)
-{
-	if (endA - startA < endB - startB)
+	//Constructs a Number from a starting index. This will seek for the surrounding newline characters.
+	Number(uint32_t start)
 	{
-		return true;
+		left = start;
+		right = start + 1;
+		while (points[left] != '\n')
+		{
+			--left;
+		}
+		while (points[right] != '\n')
+		{
+			++right;
+		}
 	}
-	if (endA - startA > endB - startB)
+
+	//copy constructor
+	Number(const Number& other)
+		: left(other.left)
+		, right(other.right)
 	{
+	}
+
+	bool operator<(const Number& other) const
+	{
+		if (right - left < other.right - other.left)
+		{
+			return true;
+		}
+		if (right - left > other.right - other.left)
+		{
+			return false;
+		}
+		uint32_t j = other.left + 1;
+		for (uint32_t i = left + 1; i < right; ++i)
+		{
+			if (points[i] == points[j])
+			{
+				++j;
+				continue;
+			}
+			return points[i] < points[j];
+		}
 		return false;
 	}
-	for (; startA < endA; ++startA)
+
+	bool operator==(const Number& other) const
 	{
-		if (points[startA] == points[startB])
+		if (right - left != other.right - other.left)
 		{
-			++startB;
-			continue;
+			return false;
 		}
-		return points[startA] < points[startB];
+		uint32_t j = other.left + 1;
+		for (uint32_t i = left + 1; i < right; ++i)
+		{
+			if (points[i] != points[j])
+			{
+				return false;
+			}
+			++j;
+		}
+		return true;
 	}
-	return false;
+
+	bool operator>=(const Number& other) const
+	{
+		return other.operator<(*this) || operator==(other);
+	}
+
+	bool operator<=(const Number& other) const
+	{
+		return operator<(other) || operator==(other);
+	}
+
+	bool operator>(const Number& other) const
+	{
+		return other.operator<(*this);
+	}
+
+	void operator++()
+	{
+		Number temp(right);
+		left = temp.left;
+		right = temp.right;
+	}
+
+	uint32_t left;
+	uint32_t right;
+};
+
+//prints value. This makes value unusable
+void output(Number& value)
+{
+	++value.left;
+	for (; value.left <= value.right; ++value.left)
+	{
+		std::cout << points[value.left];
+	}
 }
 
 int main()
 {
 	uint32_t count;
 	std::cin >> count;
-	uint32_t len = fread(points + DIGITS, CHARSIZE, count * DIGITS + 1, stdin);
-	uint32_t l = DIGITS;
-	uint32_t r = DIGITS + len - 1;
+	
+	uint32_t len = fread(points, CHARSIZE, count * DIGITS + 1, stdin);
+	uint32_t start = 0;
+	uint32_t end = len - 1; //the rightmost \n
 
-	//copy the rightmost and leftmost number to the opposing ends
-	uint32_t copyL = l - 1;
-	uint32_t copyR = r + 1;
-	for (uint32_t i = 0; i < DIGITS; ++i)
+	if (count == 1)
 	{
-		points[copyL] = points[r - i - 1];
-		points[copyR] = points[l + i + 1];
-		--copyL;
-		++copyR;
+		Number x(start);
+		output(x);
+		return 0;
 	}
 
-	while (true) 
+	Number m0(start);
+	Number m1(m0.right + (end - m0.right) / 3);
+
+	if (count == 2)
 	{
-		//Find the delimiters of the middle number
-		uint32_t midStart = (l + r) / 2;
-		uint32_t midEnd = midStart + 1; //careful!
-		while (points[midStart] != '\n')
+		if (m1 < m0)
 		{
-			--midStart;
-		}
-		while (points[midEnd] != '\n')
-		{
-			++midEnd;
-		}
-
-		//Check whether there's only one Element left
-		if (midStart == l && midEnd == r)
-		{
-			output(++midStart, midEnd);
+			output(m1);
 			return 0;
 		}
+		output(m0);
+		return 0;
+	}
 
-		//Find the delimiters of the neighbours of the middle number
-		uint32_t midStartL = midStart - 1;
-		while (points[midStartL] != '\n')
+	Number m2((m1.right + end) / 2);
+
+	if (count == 3)
+	{
+		if (m0 < m1 && m0 < m2)
 		{
-			--midStartL;
-		}
-		uint32_t midEndR = midEnd + 1;
-		while (points[midEndR] != '\n') 
-		{
-			++midEndR;
-		}
-		
-		//Compare the middle to it's neighbours
-		bool midLessThanLeft = lessThan(midStart, midEnd, midStartL, midStart);
-		bool midLessThanRight = lessThan(midStart, midEnd, midEnd, midEndR);
-		if (midLessThanLeft && midLessThanRight)
-		{
-			output(++midStart, midEnd);
+			output(m0);
 			return 0;
 		}
-
-		//Compare the neighbours to eachother
-		bool leftLEQRight;
-		if (midLessThanLeft != midLessThanRight)
+		if (m1 < m2 && m1 < m0)
 		{
-			//(m < l != m < r) =>  (l <= m < r) || (l > m >= r)
-			//1. => (m < l) => (l > m >= r) => (l > r) => !( l <= r)
-			//2. => !(m < l) => (m >= l) => (l <= m < r) => (l <= r)
-			leftLEQRight = !midLessThanLeft;
+			output(m1);
+			return 0;
 		}
-		else
-		{
-			leftLEQRight = !lessThan(midStartL, midStart, midEnd, midEndR);
-		}
+		output(m2);
+		return 0;
+	}
 
-		if (leftLEQRight)
+	//extend to the right, so that m1 can be found to the right of m2
+	std::memcpy(points + len, points + 1, m1.right);
+
+	Number l;
+	Number m;
+	Number r;
+	
+	while (true)
+	{
+		if (m1 < m0 && m1 < m2)
 		{
-			r = midStart;
-			if (r == DIGITS)
+			l = m0;
+			m = m1;
+			r = m2;
+			break;
+		}
+		if (m0 < m1 && m0 < m2)
+		{
+			l = m2;
+			m = Number(end);
+			r = Number(end + m1.left);
+			break;
+		}
+		if (m2 < m0 && m2 < m1)
+		{
+			l = m1;
+			m = m2;
+			r = Number(end);
+			break;
+		}
+		if (m0 == m1 || m1 == m2)
+		{
+			++m1; //what if m1 is m2?
+			continue;
+		}
+		++m0; //what id m0 is m1?
+	}
+
+	while (true)
+	{
+		bool goLeft = (m.left - l.right > r.left - m.right);
+		uint32_t spot = goLeft ? (m.left + l.right) / 2 : (r.left + m.right) / 2;
+		Number seeker(spot);
+
+		if (seeker < m)
+		{
+			if (goLeft)
 			{
-				output(++midStartL, midStart);
-				return 0;
+				r = m;
+				m = seeker;
+			}
+			else
+			{
+				l = m;
+				m = seeker;
 			}
 		}
 		else
 		{
-			l = midEnd;
-			if (l == len + DIGITS - 1)
+			if (goLeft)
 			{
-				output(++midEnd, midEndR);
-				return 0;
+				l = seeker;
+			}
+			else
+			{
+				r = seeker;
 			}
 		}
-	}
 
+		if (l.right == m.left && m.right == r.left)
+		{
+			output(m);
+			return 0;
+		}
+	}
 
     return 0;
 }
