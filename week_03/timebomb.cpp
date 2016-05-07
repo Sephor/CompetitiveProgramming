@@ -1,48 +1,113 @@
 #include <iostream>
 #include <stdint.h>
 
-#define COUNTER uint32_t
-#define MAXCOINS 10
+#define MAXCOINS 100000
+
+struct SubSeries
+{
+	SubSeries() {};
+
+	SubSeries(uint32_t len, uint32_t l, bool bottom)
+		: length(len)
+		, left(l)
+		, isBottom(bottom)
+	{}
+
+	uint32_t length;
+	uint32_t left;
+	bool isBottom;
+};
+
+uint32_t numbers[2][MAXCOINS];
+SubSeries workStack[MAXCOINS];
+
+void merge(uint32_t& stackPointer, uint64_t& counter)
+{
+	SubSeries& right = workStack[stackPointer--];
+	SubSeries& left = workStack[stackPointer];
+
+	if (right.isBottom != left.isBottom) 
+	{
+		for (uint32_t j = right.left; j < right.left + right.length; ++j)
+		{
+			numbers[left.isBottom][j] = numbers[right.isBottom][j];
+		}
+	}
+
+	uint32_t l = 0;
+	uint32_t r = 0;
+	
+	while (l < left.length && r < right.length)
+	{
+		uint32_t leftNumber = numbers[left.isBottom][left.left + l];
+		uint32_t rightNumber = numbers[left.isBottom][right.left + r];
+		if (leftNumber >= rightNumber)
+		{
+			numbers[!left.isBottom][left.left + l + r] = leftNumber;
+			++l;
+		}
+		else
+		{
+			numbers[!left.isBottom][left.left + l + r] = rightNumber;
+			counter += left.length - l;
+			++r;
+		}
+	}
+	while (l < left.length)
+	{
+		numbers[!left.isBottom][left.left + l + r] = numbers[left.isBottom][left.left + l];
+		++l;
+	}
+	while (r < right.length)
+	{
+		numbers[!left.isBottom][left.left + l + r] = numbers[left.isBottom][right.left + r];
+		++r;
+	}
+
+	left = SubSeries(left.length + right.length, left.left, !left.isBottom);
+}
+
+void cleanStack(uint32_t& stackPointer, uint64_t& counter)
+{
+	while (stackPointer > 0 && workStack[stackPointer].length >= workStack[stackPointer - 1].length)
+	{
+		merge(stackPointer, counter);
+	}
+}
 
 int main()
 {
 	std::ios::sync_with_stdio(false);
 
-	uint16_t cases;
+	uint32_t cases;
 	std::cin >> cases;
-
-	COUNTER coins[MAXCOINS];
-
-	COUNTER player1[2][MAXCOINS];
-	COUNTER player2[2][MAXCOINS];
-
-	bool flip = false;
 
 	for (; cases > 0; --cases)
 	{
-		uint16_t coinCount;
-		std::cin >> coinCount;
+		uint32_t numberCount;
+		std::cin >> numberCount;
 
-		for (uint16_t i = 0; i < coinCount; ++i)
+		for (uint32_t i = 0; i < numberCount; ++i)
 		{
-			std::cin >> coins[i];
-			player1[flip][i] = coins[i];
-			player2[flip][i] = 0;
+			std::cin >> numbers[1][i];
 		}
 
-		for (uint16_t j = 1; j < coinCount; ++j)
+		uint64_t counter = 0;
+		uint32_t stackPointer = 0;
+		workStack[0] = SubSeries(1, 0, true);
+
+		for (uint32_t i = 1; i < numberCount; ++i)
 		{
-			flip = !flip; //flop!
-			for (uint16_t i = 0; i < coinCount - j; ++i)
-			{
-				COUNTER right = coins[i + j] + player2[!flip][i];
-				COUNTER left = coins[i] + player2[!flip][i + 1];
-				player1[flip][i] = left > right ? left : right;
-				player2[flip][i] = left > right ? player1[!flip][i + 1] : player1[!flip][i];
-			}
+			workStack[++stackPointer] = SubSeries(1, i, true);
+			cleanStack(stackPointer, counter);
 		}
 
-		std::cout << player1[flip][0] << std::endl;
+		while (stackPointer > 0)
+		{
+			merge(stackPointer, counter);
+		}
+
+		std::cout << counter << '\n';
 	}
 
     return 0;
