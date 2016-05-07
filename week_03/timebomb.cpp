@@ -2,6 +2,7 @@
 #include <stdint.h>
 
 #define MAXCOINS 100000
+#define MINLEN 2
 
 struct SubSeries
 {
@@ -21,11 +22,24 @@ struct SubSeries
 uint32_t numbers[2][MAXCOINS];
 SubSeries workStack[MAXCOINS];
 
-void merge(uint32_t& stackPointer, uint64_t& counter)
+void selectSort(SubSeries& sub, uint64_t& counter)
 {
-	SubSeries& right = workStack[stackPointer--];
-	SubSeries& left = workStack[stackPointer];
+	for (uint32_t i = sub.left; i < sub.left + sub.length; ++i)
+	{
+		uint32_t number = numbers[sub.isBottom][i];
+		uint32_t j = i;
+		while (j > sub.left && number > numbers[sub.isBottom][j - 1])
+		{
+			numbers[sub.isBottom][j] = numbers[sub.isBottom][j - 1];
+			--j;
+			++counter;
+		}
+		numbers[sub.isBottom][j] = number;
+	}
+}
 
+void merge(SubSeries& left, SubSeries& right, uint64_t& counter)
+{
 	if (right.isBottom != left.isBottom) 
 	{
 		for (uint32_t j = right.left; j < right.left + right.length; ++j)
@@ -67,11 +81,16 @@ void merge(uint32_t& stackPointer, uint64_t& counter)
 	left = SubSeries(left.length + right.length, left.left, !left.isBottom);
 }
 
-void cleanStack(uint32_t& stackPointer, uint64_t& counter)
+void cleanStack(uint32_t& stackSize, uint64_t& counter)
 {
-	while (stackPointer > 0 && workStack[stackPointer].length >= workStack[stackPointer - 1].length)
+	SubSeries* left = &workStack[stackSize - 2];
+	SubSeries* right = &workStack[stackSize - 1];
+	while (stackSize > 1 && right->length >= left->length)
 	{
-		merge(stackPointer, counter);
+		left = &workStack[stackSize - 2];
+		right = &workStack[stackSize - 1];
+		merge(*left, *right, counter);
+		--stackSize;
 	}
 }
 
@@ -93,18 +112,30 @@ int main()
 		}
 
 		uint64_t counter = 0;
-		uint32_t stackPointer = 0;
-		workStack[0] = SubSeries(1, 0, true);
+		uint32_t stackSize = 0;
 
-		for (uint32_t i = 1; i < numberCount; ++i)
+		uint32_t sortedEnd = 0;
+		while (sortedEnd < numberCount)
 		{
-			workStack[++stackPointer] = SubSeries(1, i, true);
-			cleanStack(stackPointer, counter);
+			workStack[stackSize] = SubSeries(1, sortedEnd, true);
+			SubSeries& nextSeries = workStack[stackSize];
+			++stackSize;
+			++sortedEnd;
+			while (nextSeries.length < MINLEN && sortedEnd < numberCount)
+			{
+				++nextSeries.length;
+				++sortedEnd;
+			}
+			selectSort(nextSeries, counter);
+			cleanStack(stackSize, counter);
 		}
 
-		while (stackPointer > 0)
+		while (stackSize > 1)
 		{
-			merge(stackPointer, counter);
+			SubSeries& left = workStack[stackSize - 2];
+			SubSeries& right = workStack[stackSize - 1];
+			merge(left, right, counter);
+			--stackSize;
 		}
 
 		std::cout << counter << '\n';
