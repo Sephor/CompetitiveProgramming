@@ -1,6 +1,6 @@
 #include <iostream>
 #include <stdint.h>
-
+using namespace std;
 #define COUNTER uint32_t
 #define MAXCOINS 10
 
@@ -9,7 +9,7 @@ int main()
 	std::ios::sync_with_stdio(false);
 
 	uint16_t cases;
-	std::cin >> cases;
+        cin >> cases;
 
 	COUNTER coins[MAXCOINS];
 
@@ -21,11 +21,11 @@ int main()
 	for (; cases > 0; --cases)
 	{
 		uint16_t coinCount;
-		std::cin >> coinCount;
+		cin >> coinCount;
 
 		for (uint16_t i = 0; i < coinCount; ++i)
 		{
-			std::cin >> coins[i];
+			cin >> coins[i];
 			player1[flip][i] = coins[i];
 			player2[flip][i] = 0;
 		}
@@ -42,7 +42,7 @@ int main()
 			}
 		}
 
-		std::cout << player1[flip][0] << std::endl;
+		cout << player1[flip][0] << endl;
 	}
 
     return 0;
